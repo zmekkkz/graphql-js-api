@@ -1,6 +1,8 @@
 const express = require('express');
+const { ApolloServer } = require('apollo-server-express');
 const sequelize = require('./config/database');
-const setupGraphQLRoutes = require('./routes');
+const typeDefs = require('./graphql/schema');
+const resolvers = require('./graphql/resolvers');
 
 const PORT = process.env.PORT || 3000;
 const app = express();
@@ -12,8 +14,22 @@ async function startServer() {
         await sequelize.authenticate();
         console.log('✅ Database connection established successfully');
         
-        // Setup GraphQL routes
-        await setupGraphQLRoutes(app);
+        // Setup GraphQL server
+        const server = new ApolloServer({ 
+            typeDefs, 
+            resolvers,
+            formatError: (error) => {
+                console.error('GraphQL Error:', error);
+                return error;
+            },
+        });
+        
+        await server.start();
+        server.applyMiddleware({ 
+            app,
+            path: '/graphql',
+            cors: true
+        });
 
         app.listen(PORT, () => {
             console.log(`🚀 Server running at http://localhost:${PORT}`);
